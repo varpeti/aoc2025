@@ -54,9 +54,6 @@ pub fn a(input: &str) -> Result<String> {
 
     for y in 0..room.len() {
         for x in 0..room[0].len() {
-            if room[y][x] != Cell::Paper {
-                continue;
-            }
             if room[y][x] == Cell::Paper
                 && get_neighbours(&room, y, x)
                     .into_iter()
@@ -74,5 +71,37 @@ pub fn a(input: &str) -> Result<String> {
 
 #[allow(dead_code, unused_variables)]
 pub fn b(input: &str) -> Result<String> {
-    Ok(format!("{}", 0x70D0))
+    let mut room: Room = input
+        .lines()
+        .map(|line| {
+            line.chars()
+                .filter_map(|c| Cell::from_char(c).ok())
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+
+    let mut sum = 0;
+    loop {
+        let mut end = true;
+        for y in 0..room.len() {
+            for x in 0..room[0].len() {
+                if room[y][x] == Cell::Paper
+                    && get_neighbours(&room, y, x)
+                        .into_iter()
+                        .filter(|c| **c == Cell::Paper)
+                        .count()
+                        < 4
+                {
+                    room[y][x] = Cell::Empty;
+                    sum += 1;
+                    end = false;
+                }
+            }
+        }
+        if end {
+            break;
+        }
+    }
+
+    Ok(format!("{}", sum))
 }
