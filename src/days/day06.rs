@@ -55,5 +55,49 @@ pub fn a(input: &str) -> Result<String> {
 
 #[allow(dead_code, unused_variables)]
 pub fn b(input: &str) -> Result<String> {
-    Ok(format!("{}", 0x70D0))
+    let mut table = Vec::<Vec<char>>::new();
+    let mut ops = Vec::<Op>::new();
+    for line in input.lines() {
+        let mut tline = Vec::<char>::new();
+        for token in line.chars() {
+            match token {
+                '+' => ops.push(Op::Add(0)),
+                '*' => ops.push(Op::Mul(1)),
+                num => tline.push(num),
+            };
+        }
+        table.push(tline);
+    }
+    table.pop();
+    let table = transpose(table);
+    let mut i = 0;
+    for line in table {
+        let num = line.iter().collect::<String>();
+        let num = num.trim();
+        if num.is_empty() {
+            i += 1;
+            continue;
+        }
+        ops[i].op(num.parse()?);
+    }
+    let sum = ops
+        .iter()
+        .map(|op| op.get())
+        .reduce(|acc, e| acc + e)
+        .unwrap();
+    Ok(format!("{}", sum))
+}
+
+fn transpose<T>(v: Vec<Vec<T>>) -> Vec<Vec<T>> {
+    assert!(!v.is_empty());
+    let len = v[0].len();
+    let mut iters: Vec<_> = v.into_iter().map(|n| n.into_iter()).collect();
+    (0..len)
+        .map(|_| {
+            iters
+                .iter_mut()
+                .map(|n| n.next().unwrap())
+                .collect::<Vec<T>>()
+        })
+        .collect()
 }
