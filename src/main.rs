@@ -10,6 +10,6 @@ macro_rules! day {($n:literal, $p:ident) => {paste::paste!{println!("{}",[<day $
 macro_rules! tst {($n:literal, $p:ident) => {paste::paste!{println!("{}",[<day $n>]::$p(&String::from_utf8(fs::read(concat!("inputs/tst", stringify!($n), ".txt"))?)?)?)}};}
 
 fn main() -> Result<()> {
-    day!(07, a);
+    day!(07, b);
     Ok(())
 }

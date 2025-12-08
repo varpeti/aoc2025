@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet, hash_map::Entry};
 
 #[allow(unused_imports)]
 use anyhow::{Result, anyhow};
@@ -36,5 +36,23 @@ pub fn a(input: &str) -> Result<String> {
 
 #[allow(dead_code, unused_variables)]
 pub fn b(input: &str) -> Result<String> {
-    Ok(format!("{}", 0x70D0))
+    let mut beams = HashMap::<usize, usize>::new();
+    for (y, line) in input.lines().enumerate() {
+        for (x, c) in line.chars().enumerate() {
+            match c {
+                'S' => {
+                    beams.insert(x, 1);
+                }
+                '.' => {}
+                '^' => {
+                    if let Some(n) = beams.remove(&x) {
+                        *beams.entry(x - 1).or_insert(0) += n;
+                        *beams.entry(x + 1).or_insert(0) += n;
+                    }
+                }
+                _ => unreachable!(),
+            }
+        }
+    }
+    Ok(format!("{}", beams.values().sum::<usize>()))
 }
