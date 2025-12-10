@@ -92,5 +92,49 @@ pub fn a(input: &str) -> Result<String> {
 
 #[allow(dead_code, unused_variables)]
 pub fn b(input: &str) -> Result<String> {
-    Ok(format!("{}", 0x70D0))
+    let mut boxes = Vec::<Pos>::new();
+    for line in input.lines().skip(1) {
+        boxes.push(Pos::from_str(line));
+    }
+    let mut dists = BTreeSet::<(usize, usize, usize)>::new();
+    for (aid, abox) in boxes.iter().enumerate() {
+        for (bid, bbox) in boxes.iter().enumerate().skip(aid + 1) {
+            let dist = abox.dist(bbox);
+            dists.insert((dist, aid, bid));
+        }
+    }
+    let mut circuits = Vec::<HashSet<usize>>::new();
+    for (dist, aid, bid) in dists.iter() {
+        let mut acid = None;
+        let mut bcid = None;
+        for (cid, circuit) in circuits.iter().enumerate() {
+            if circuit.contains(aid) {
+                acid = Some(cid);
+            }
+            if circuit.contains(bid) {
+                bcid = Some(cid);
+            }
+            if acid.is_some() && bcid.is_some() {
+                break;
+            }
+        }
+        match (acid, bcid) {
+            (None, None) => circuits.push(HashSet::from([*aid, *bid])),
+            (None, Some(bcid)) => _ = circuits[bcid].insert(*aid),
+            (Some(acid), None) => _ = circuits[acid].insert(*bid),
+            // Merge two circuits (larger id to smaller for less shifting)
+            (Some(acid), Some(bcid)) => {
+                if acid != bcid {
+                    let min_cid = acid.min(bcid);
+                    let max_cid = acid.max(bcid);
+                    let to_move = circuits.remove(max_cid);
+                    circuits[min_cid].extend(to_move);
+                }
+            }
+        }
+        if circuits[0].len() == boxes.len() {
+            return Ok(format!("{}", boxes[*aid].x * boxes[*bid].x));
+        }
+    }
+    Err(anyhow!("Not found!"))
 }
