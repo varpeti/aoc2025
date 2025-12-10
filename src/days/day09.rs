@@ -2,6 +2,8 @@ use std::ops::Add;
 
 #[allow(unused_imports)]
 use anyhow::{Result, anyhow};
+use geo::{Contains, Coord, LineString, Polygon, Rect, coord};
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
 #[derive(Debug)]
 struct Pos {
@@ -40,5 +42,33 @@ pub fn a(input: &str) -> Result<String> {
 
 #[allow(dead_code, unused_variables)]
 pub fn b(input: &str) -> Result<String> {
-    Ok(format!("{}", 0x70D0))
+    let mut points = Vec::<Coord>::new();
+    for line in input.lines() {
+        let (x, y) = line
+            .split_once(',')
+            .ok_or_else(|| anyhow!("Expected 'x,y'"))?;
+        points.push(coord! { x: x.parse::<usize>()? as f64, y: y.parse::<usize>()? as f64 });
+    }
+    let polygon = Polygon::new(LineString::from(points), vec![]);
+    let points = polygon.exterior().points().collect::<Vec<_>>();
+    let max_area = points
+        .par_iter()
+        .enumerate()
+        .flat_map(|(aid, ap)| {
+            points.par_iter().skip(aid + 1).map(|bp| {
+                let rect = Rect::new(*ap, *bp);
+                if polygon.contains(&rect) {
+                    area(&rect)
+                } else {
+                    0
+                }
+            })
+        })
+        .max()
+        .unwrap();
+    Ok(format!("{}", max_area))
+}
+
+fn area(rect: &Rect) -> u64 {
+    ((rect.width() + 1.) * (rect.height() + 1.)) as u64
 }
