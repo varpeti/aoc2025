@@ -1,6 +1,6 @@
 #[allow(unused_imports)]
 use anyhow::{Result, anyhow};
-use pathfinding::prelude::dijkstra;
+use pathfinding::{prelude::astar, prelude::dijkstra};
 
 #[derive(Debug)]
 struct Machine {
@@ -81,5 +81,48 @@ pub fn a(input: &str) -> Result<String> {
 
 #[allow(dead_code, unused_variables)]
 pub fn b(input: &str) -> Result<String> {
-    Ok(format!("{}", 0x70D0))
+    // So it probaly solves it...
+    // But it will take like forever
+    // So no ☀️ for me (yet) 😭
+    // // Probably there is an advanced linear algebraic solution
+    // But I have not enough knowlege (yet) and don't want to rely on AI
+    // Also there is many optimalization which could be done (Vec of bools to int, etc)
+    let mut sum = 0;
+    for line in input.lines() {
+        let machine = Machine::from_str(line)?;
+        let (_, min) = astar(
+            &vec![0; machine.joltage.len()],
+            |pos: &Vec<usize>| {
+                let mut successors = Vec::with_capacity(machine.buttons.len());
+                for button in machine.buttons.iter() {
+                    let mut new_pos = pos.clone();
+                    let mut ok = true;
+                    for b in button {
+                        new_pos[*b] += 1;
+                        if new_pos[*b] > machine.joltage[*b] {
+                            ok = false;
+                            break;
+                        }
+                    }
+                    if ok {
+                        // Probably there is a better cost
+                        successors.push((new_pos, 1));
+                    }
+                }
+                successors
+            },
+            |pos| {
+                // Probably there is a better heuristic
+                let mut h = 0;
+                for (i, j) in pos.iter().enumerate() {
+                    h += machine.joltage[i] - j;
+                }
+                h
+            },
+            |pos| *pos == machine.joltage,
+        )
+        .ok_or_else(|| anyhow!("Expected solution!"))?;
+        sum += min;
+    }
+    Ok(format!("{}", sum))
 }
