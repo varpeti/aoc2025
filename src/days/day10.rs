@@ -1,6 +1,8 @@
 #[allow(unused_imports)]
 use anyhow::{Result, anyhow};
-use pathfinding::{prelude::astar, prelude::dijkstra};
+use good_lp::{Expression, ProblemVariables, Solution, SolverModel, default_solver, variable};
+use pathfinding::prelude::dijkstra;
+use std::ops::AddAssign;
 
 #[derive(Debug)]
 struct Machine {
@@ -81,48 +83,33 @@ pub fn a(input: &str) -> Result<String> {
 
 #[allow(dead_code, unused_variables)]
 pub fn b(input: &str) -> Result<String> {
-    // So it probaly solves it...
-    // But it will take like forever
-    // So no ☀️ for me (yet) 😭
-    // // Probably there is an advanced linear algebraic solution
-    // But I have not enough knowlege (yet) and don't want to rely on AI
-    // Also there is many optimalization which could be done (Vec of bools to int, etc)
     let mut sum = 0;
     for line in input.lines() {
         let machine = Machine::from_str(line)?;
-        let (_, min) = astar(
-            &vec![0; machine.joltage.len()],
-            |pos: &Vec<usize>| {
-                let mut successors = Vec::with_capacity(machine.buttons.len());
-                for button in machine.buttons.iter() {
-                    let mut new_pos = pos.clone();
-                    let mut ok = true;
-                    for b in button {
-                        new_pos[*b] += 1;
-                        if new_pos[*b] > machine.joltage[*b] {
-                            ok = false;
-                            break;
-                        }
-                    }
-                    if ok {
-                        // Probably there is a better cost
-                        successors.push((new_pos, 1));
-                    }
+        let mut problem_variables = ProblemVariables::new();
+        let mut button_variables = Vec::with_capacity(machine.buttons.len());
+        for _ in 0..machine.buttons.len() {
+            button_variables.push(problem_variables.add(variable().min(0).integer()));
+        }
+        let mut problem = problem_variables
+            .minimise(button_variables.iter().sum::<Expression>())
+            .using(default_solver);
+        for (ji, jolt) in machine.joltage.iter().enumerate() {
+            let mut expression = Expression::with_capacity(machine.buttons.len());
+            for (bi, button) in machine.buttons.iter().enumerate() {
+                if button.contains(&ji) {
+                    expression.add_assign(button_variables[bi]);
                 }
-                successors
-            },
-            |pos| {
-                // Probably there is a better heuristic
-                let mut h = 0;
-                for (i, j) in pos.iter().enumerate() {
-                    h += machine.joltage[i] - j;
-                }
-                h
-            },
-            |pos| *pos == machine.joltage,
-        )
-        .ok_or_else(|| anyhow!("Expected solution!"))?;
-        sum += min;
+            }
+            problem = problem.with(expression.eq(*jolt as u32));
+        }
+        let solution = problem.solve().unwrap();
+        sum += button_variables
+            .into_iter()
+            .map(|variable| solution.value(variable))
+            .sum::<f64>()
+            .round() as usize;
     }
+
     Ok(format!("{}", sum))
 }
